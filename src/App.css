@@ -1,0 +1,7 @@
+/* App-level styles - component-specific styles are in index.css */
+#root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}

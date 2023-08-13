@@ -1,0 +1,209 @@
+/* Reduce width of start, duration, current, and end fields, but keep remaining the same */
+
+/* All timer fields: left-aligned, same width, including Remaining */
+input#start[type="time"],
+input[type="time"][readonly],
+input#end[type="time"],
+input[type="text"][readonly] {
+  min-width: 200px;
+  max-width: 340px;
+  width: 180px;
+  text-align: left;
+}
+
+/* Reduce width of duration number field only */
+input#duration[type="number"] {
+  width: 75px;
+  min-width: 75px;
+  max-width: 90px;
+  text-align: right;
+  margin-left: 0;
+}
+
+.duration-row label {
+  flex: 0 0 32.5% !important;
+  text-align: right;
+  padding-right: 0px;
+}
+
+.duration-row {
+  width: 100%;
+}
+
+/* Remaining field can auto-scale if needed */
+.remaining-auto-width {
+  min-width: 170px;
+  max-width: 340px;
+  width: auto;
+  text-align: left;
+}
+
+#center-wrapper {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--main-bg);
+}
+
+:root {
+  --text-color: #23272b;
+  --main-bg: #f7f7f7;
+  --card-bg: #ffffff;
+  --input-bg: #f0f0f0;
+  --border-color: #ddd;
+  --accent: #2e7dff;
+  --danger: #e53935;
+  --shadow: 0 4px 32px #0002;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: var(--text-color);
+  background: var(--main-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  min-width: 170px;
+  max-width: 240px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body.dark-mode, .dark-mode {
+  --main-bg: #181c1f;
+  --card-bg: #23272b;
+  --input-bg: #2a2e32;
+  --border-color: #333;
+  --text-color: #f7f7f7;
+  --accent: #2e7dff;
+  --danger: #e53935;
+  color-scheme: dark;
+  color: var(--text-color);
+  background: var(--main-bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--main-bg);
+  color: var(--text-color);
+}
+
+
+.exam-timer-card {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border-color);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 24px 28px 24px 28px;
+  min-width: 340px;
+  max-width: 98vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.exam-timer-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  margin-top: 0;
+  color: var(--accent);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+
+input[type="time"],
+input[type="number"],
+input[type="text"] {
+  font-size: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: var(--input-bg);
+  color: var(--text-color);
+  outline: none;
+  min-width: 220px;
+  max-width: 340px;
+  box-sizing: border-box;
+}
+
+
+input[type="text"]:read-only {
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  background: var(--main-bg);
+}
+
+input[type="text"].danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+button {
+  font-family: inherit;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  border: none;
+  padding: 8px 20px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #2e7dff33;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+label {
+  font-size: 1.1rem;
+  color: var(--text-color);
+  margin-bottom: 0;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+
+/* Stack timer rows vertically, align label left and field right */
+.exam-timer-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.exam-timer-card form > div {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: flex-start;
+}
+.exam-timer-card form > div:last-child {
+  margin-bottom: 0;
+}
+
+label {
+  justify-self: start;
+  text-align: left;
+  min-width: 80px;
+  margin-right: 0;
+}
+
+input[type="time"],
+input[type="number"],
+input[type="text"] {
+  justify-self: start;
+  min-width: 170px;
+  max-width: 340px;
+  text-align: left;
+}
+
+/* Remove old table/input helpers and unused classes */
