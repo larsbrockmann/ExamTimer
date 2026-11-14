@@ -1,8 +1,21 @@
 # Exam Timer
 
+<p align="left">
+  <a href="https://brockmann.one"><img src="https://img.shields.io/badge/website-brockmann.one-2e7dff?style=flat-square" alt="Website" /></a>
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/Vite-4-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 4" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License: MIT" />
+</p>
+
 Minimalist exam timer with live remaining time, countdown support, and dark mode.
 
 Deployed at [brockmann.one](https://brockmann.one).
+
+<p align="center">
+  <img src="screenshots/light-mode.png" alt="Light Mode" width="48%" />
+  &nbsp;
+  <img src="screenshots/dark-mode.png" alt="Dark Mode" width="48%" />
+</p>
 
 ## Development
 
