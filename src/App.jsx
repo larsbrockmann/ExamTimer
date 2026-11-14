@@ -1,166 +1,131 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
-// Utility: Pad number to 2 digits
 function pad(n) {
   return n.toString().padStart(2, "0");
 }
 
-// Utility: Format milliseconds as HH:MM or HH:MM:SS
 function formatTime(ms, showSeconds = false) {
-  let totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const remainingSeconds = totalSeconds % 3600;
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
-  // Force show seconds only in the final 5 minutes
+  // Automatically show seconds in the final minute
   const forceShowSeconds = totalSeconds > 0 && totalSeconds <= 60;
-  return (showSeconds || forceShowSeconds)
+  return showSeconds || forceShowSeconds
     ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
     : `${pad(hours)}:${pad(minutes)}`;
 }
 
-// Main App Component
 export default function App() {
-  // --- State ---
-  // Settings
   const [dark, setDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
   const [showSeconds, setShowSeconds] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mode, setMode] = useState("start-duration");
 
-  // Modes
-  const [mode, setMode] = useState("start-duration"); // "start-duration" or "countdown"
-
-  // Start/Duration mode
   const [start, setStart] = useState(() => {
     const now = new Date();
     return `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   });
   const [duration, setDuration] = useState("");
 
-  // Countdown mode
   const [countdownInput, setCountdownInput] = useState(60);
   const [countdownLeft, setCountdownLeft] = useState(0);
   const [countdownRunning, setCountdownRunning] = useState(false);
-  const countdownInterval = useRef();
 
-  // Timer for start/duration mode
   const [now, setNow] = useState(new Date());
+  const settingsRef = useRef(null);
+
+  // Live clock
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Click outside to close settings menu
+  // Close settings on outside click
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      const settingsButton = document.querySelector('button[aria-label="Settings"]');
-      const settingsMenu = document.querySelector('.settings-menu');
-      
-      if (settingsOpen && 
-          settingsButton && 
-          settingsMenu && 
-          !settingsButton.contains(event.target) && 
-          !settingsMenu.contains(event.target)) {
+    if (!settingsOpen) return;
+    const handleClickOutside = (e) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target)) {
         setSettingsOpen(false);
       }
     };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
+    return () => document.removeEventListener("pointerdown", handleClickOutside);
   }, [settingsOpen]);
 
-  // Theme effect
+  // Dark mode class toggle
   useEffect(() => {
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
     document.documentElement.classList.toggle("dark-mode", dark);
   }, [dark]);
 
-  // Countdown logic
+  // Countdown timer interval
   useEffect(() => {
-    if (countdownRunning && countdownLeft > 0) {
-      countdownInterval.current = setInterval(() => {
-        setCountdownLeft((left) => {
-          if (left <= 1000) {
-            clearInterval(countdownInterval.current);
-            return 0;
-          }
-          return left - 1000;
-        });
-      }, 1000);
-      return () => clearInterval(countdownInterval.current);
-    }
-    return () => {};
-  }, [countdownRunning, countdownLeft]);
+    if (!countdownRunning) return;
 
-  // --- Derived values ---
+    const interval = setInterval(() => {
+      setCountdownLeft((prev) => {
+        if (prev <= 1000) {
+          clearInterval(interval);
+          setCountdownRunning(false);
+          return 0;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [countdownRunning]);
+
+  // Derived values for start-duration mode
   let remainingMs = 0;
-  let bis = "";
-  if (mode === "start-duration") {
+  let endFormatted = "";
+  const numDuration = Number(duration);
+
+  if (mode === "start-duration" && start && numDuration > 0) {
     const [h, m] = start.split(":").map(Number);
     const startDate = new Date(now);
     startDate.setHours(h, m, 0, 0);
-    const bisDate = new Date(startDate.getTime() + duration * 60000);
-    bis = `${pad(bisDate.getHours())}:${pad(bisDate.getMinutes())}`;
-    remainingMs = bisDate - now;
+    const endDate = new Date(startDate.getTime() + numDuration * 60000);
+    endFormatted = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+    remainingMs = endDate.getTime() - now.getTime();
   }
 
-  // --- Theme Colors are now handled by CSS variables in index.css ---
+  const handleStartCountdown = () => {
+    const mins = Number(countdownInput);
+    if (mins > 0) {
+      setCountdownLeft(mins * 60000);
+      setCountdownRunning(true);
+    }
+  };
 
-  // --- Render ---
+  const handleStopCountdown = () => {
+    setCountdownRunning(false);
+    setCountdownLeft(0);
+  };
+
+  const currentFormatted = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const isRemainingActive = numDuration > 0 && remainingMs > 0;
+  const remainingDisplay = isRemainingActive
+    ? formatTime(remainingMs, showSeconds)
+    : `00:00${showSeconds ? ":00" : ""}`;
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--main-bg)",
-        color: "var(--text-color)",
-        fontFamily: "Inter, Arial, sans-serif"
-      }}
-    >
-      {/* Settings menu */}
-      <div
-        style={{
-          position: "absolute",
-          top: 24,
-          right: 32,
-          zIndex: 10
-        }}
-      >
+    <div className="app-container">
+      {/* Settings Menu */}
+      <div className="settings-container" ref={settingsRef}>
         <button
+          className="settings-btn"
           onClick={() => setSettingsOpen((o) => !o)}
-          style={{
-            background: "var(--accent)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            padding: "8px 16px",
-            fontSize: 22,
-            cursor: "pointer",
-            boxShadow: "0 2px 8px #0002"
-          }}
           aria-label="Settings"
         >
           ⚙️
         </button>
+
         {settingsOpen && (
-          <div
-            className="settings-menu"
-            style={{
-              position: "absolute",
-              top: 48,
-              right: 0,
-              background: "var(--card-bg)",
-              color: "var(--text-color)",
-              border: "1px solid var(--border-color)",
-              borderRadius: 12,
-              boxShadow: "0 4px 24px #0003",
-              padding: 20,
-              minWidth: 220,
-              display: "flex",
-              flexDirection: "column",
-              gap: 16
-            }}
-          >
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="settings-menu">
+            <label>
               <input
                 type="checkbox"
                 checked={dark}
@@ -168,7 +133,7 @@ export default function App() {
               />
               Dark Mode
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label>
               <input
                 type="checkbox"
                 checked={showSeconds}
@@ -176,7 +141,7 @@ export default function App() {
               />
               Show Seconds
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label>
               <input
                 type="radio"
                 name="mode"
@@ -186,7 +151,7 @@ export default function App() {
               />
               Start + Duration
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label>
               <input
                 type="radio"
                 name="mode"
@@ -200,133 +165,122 @@ export default function App() {
         )}
       </div>
 
-      {/* Centered Timer Card */}
-      <div id="center-wrapper">
-        <div
-          className="exam-timer-card"
-          style={{ background: "var(--card-bg)", border: "1.5px solid var(--border-color)" }}
-        >
-          <h2 className="exam-timer-title">Exam Timer</h2>
-          {mode === "start-duration" ? (
-            <form
-              style={{ display: "flex", flexDirection: "column", gap: 24 }}
-              onSubmit={e => e.preventDefault()}
-            >
-              {/* Start Time */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label htmlFor="start" style={{ flex: 1, textAlign: "right", fontSize: 20 }}>Start:</label>
+      {/* Main Timer Card */}
+      <div className="exam-timer-card">
+        <h1 className="exam-timer-title">Exam Timer</h1>
+
+        {mode === "start-duration" ? (
+          <form className="timer-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="form-row">
+              <label htmlFor="start">Start:</label>
+              <input
+                id="start"
+                type="time"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-row">
+              <label htmlFor="duration">Duration:</label>
+              <div className="duration-input-wrapper">
                 <input
-                  id="start"
-                  type="time"
-                  value={start}
-                  onChange={e => setStart(e.target.value)}
-                  style={{ fontSize: 28, border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 8px", background: "var(--main-bg)", color: "var(--text-color)", width: 70 }}
-                />
-              </div>
-              {/* Duration */}
-              <div className="duration-row" style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label htmlFor="duration" style={{ flex: 1, textAlign: "right", fontSize: 20, flexBasis: "50%" }}>Duration:</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <input
-                    id="duration"
-                    type="number"
-                    min={1}
-                    value={duration}
-                    onChange={e => setDuration(Number(e.target.value))}
-                    onFocus={e => {e.target.value = ''; setDuration('')}}
-                    style={{ fontSize: 28, border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 8px", background: "var(--main-bg)", color: "var(--text-color)", width: 70}}
-                  />
-                  <span style={{ fontSize: 20, color: "var(--text-color)" }}>min</span>
-                </div>
-              </div>
-              {/* Current Time */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label style={{ flex: 1, textAlign: "right", fontSize: 20 }}>Current:</label>
-                <input
-                  type="time"
-                  readOnly
-                  value={pad(now.getHours()) + ":" + pad(now.getMinutes())}
-                  style={{ fontSize: 28, border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 8px", background: "var(--main-bg)", color: "var(--text-color)", width: 70 }}
-                  step={60}
-                />
-              </div>
-              {/* Remaining Time */}
-              <hr style={{ border: 'none', borderTop: '2px solid var(--accent)', margin: '18px 0 8px 0' }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label style={{ flex: 1, textAlign: "right", fontSize: 20 }}>Remaining:</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={remainingMs > 0 ? formatTime(remainingMs, showSeconds) : "00:00" + (showSeconds ? ":00" : "")}
-                  style={{ fontSize: 36, border: "1.5px solid var(--accent)", borderRadius: 8, padding: "6px 8px", background: "var(--main-bg)", color: remainingMs > 0 ? "var(--accent)" : "#e53935", width: 90, textAlign: "left", fontWeight: 700 }}
-                />
-              </div>
-              <hr style={{ border: 'none', borderTop: '2px solid var(--accent)', margin: '8px 0 18px 0' }} />
-              {/* End Time */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label style={{ flex: 1, textAlign: "right", fontSize: 20 }}>End:</label>
-                <input
-                  type="time"
-                  readOnly
-                  value={bis}
-                  style={{ fontSize: 28, border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 8px", background: "var(--main-bg)", color: "var(--text-color)", width: 70 }}
-                />
-              </div>
-            </form>
-          ) : (
-            <form
-              style={{ display: "flex", flexDirection: "column", gap: 32, alignItems: "center" }}
-              onSubmit={e => e.preventDefault()}
-            >
-              {/* Countdown Input */}
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <label htmlFor="cdur" style={{ fontSize: 20 }}>Minutes:</label>
-                <input
-                  id="cdur"
+                  id="duration"
                   type="number"
-                  min={1}
-                  value={countdownInput}
-                  onChange={e => setCountdownInput(Number(e.target.value))}
-                  onFocus={e => {e.target.value = ''; setCountdownInput('')}}
-                  style={{ fontSize: 28, border: "1px solid var(--border-color)", borderRadius: 8, padding: "6px 8px", background: "var(--main-bg)", color: "var(--text-color)", width: 50, textAlign: "right" }}
-                  disabled={countdownRunning}
-                />
-              </div>
-              {/* Countdown Controls */}
-              <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
-                <button
-                  style={{ fontSize: 26, padding: "8px 32px", borderRadius: 8, border: "none", background: "var(--accent)", color: "#fff", fontWeight: 600, cursor: countdownRunning ? "not-allowed" : "pointer", boxShadow: countdownRunning ? "none" : "0 2px 8px #2e7dff33" }}
-                  onClick={() => {
-                    setCountdownLeft(countdownInput * 60000);
-                    setCountdownRunning(true);
+                  min="1"
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value === "" ? "" : Number(e.target.value))}
+                  onFocus={(e) => {
+                    if (e.target.value === "") setDuration("");
                   }}
-                  disabled={countdownRunning}
-                >
-                  Start
-                </button>
-                <button
-                  style={{ fontSize: 26, padding: "8px 32px", borderRadius: 8, border: "1.5px solid var(--accent)", background: "none", color: "var(--accent)", fontWeight: 600, cursor: !countdownRunning ? "not-allowed" : "pointer" }}
-                  onClick={() => {
-                    setCountdownRunning(false);
-                    setCountdownLeft(0);
-                  }}
-                  disabled={!countdownRunning}
-                >
-                  Stop
-                </button>
-              </div>
-              {/* Countdown Display */}
-              <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
-                <input
-                  type="text"
-                  readOnly
-                  value={formatTime(countdownLeft, showSeconds)}
-                  style={{ fontSize: 32, border: "2px solid var(--accent)", borderRadius: 10, padding: "8px 12px", background: "var(--main-bg)", color: countdownLeft > 0 ? "var(--accent)" : "#e53935", textAlign: "center", width: 270, fontWeight: 700, letterSpacing: 2 }}
+                  className="form-input form-input-short"
+                  placeholder="60"
                 />
+                <span className="form-input-unit">min</span>
               </div>
-            </form>
-          )}
-        </div>
+            </div>
+
+            <div className="form-row">
+              <label htmlFor="now">Now:</label>
+              <input
+                id="now"
+                type="time"
+                readOnly
+                value={currentFormatted}
+                className="form-input"
+              />
+            </div>
+
+            <hr className="divider" />
+
+            <div className="form-row">
+              <label>Remaining:</label>
+              <input
+                type="text"
+                readOnly
+                value={remainingDisplay}
+                className={`form-input remaining-input ${isRemainingActive ? "active" : "danger"}`}
+              />
+            </div>
+
+            <hr className="divider" />
+
+            <div className="form-row">
+              <label htmlFor="end">End:</label>
+              <input
+                id="end"
+                type="time"
+                readOnly
+                value={endFormatted}
+                className="form-input"
+              />
+            </div>
+          </form>
+        ) : (
+          <form className="countdown-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="form-row countdown-input-row">
+              <label htmlFor="cdur">Minutes:</label>
+              <input
+                id="cdur"
+                type="number"
+                min="1"
+                value={countdownInput}
+                onChange={(e) => setCountdownInput(e.target.value === "" ? "" : Number(e.target.value))}
+                className="form-input form-input-short"
+                disabled={countdownRunning}
+              />
+            </div>
+
+            <div className="button-group">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleStartCountdown}
+                disabled={countdownRunning || !countdownInput || Number(countdownInput) <= 0}
+              >
+                Start
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleStopCountdown}
+                disabled={!countdownRunning && countdownLeft === 0}
+              >
+                Stop
+              </button>
+            </div>
+
+            <div className="countdown-display-wrapper">
+              <input
+                type="text"
+                readOnly
+                value={formatTime(countdownLeft, showSeconds)}
+                className={`countdown-display ${countdownLeft > 0 ? "active" : "danger"}`}
+              />
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
